@@ -1,0 +1,6 @@
+.build/
+.build-arm64/
+.build-x86_64/
+.build-test-x86/
+TrackHarbor.app/
+.DS_Store

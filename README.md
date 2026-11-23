@@ -1,0 +1,101 @@
+# TrackHarbor
+
+TrackHarbor is a small native macOS app for turning Spotify playlist and album
+URLs into tagged MP3 files for copying to an iPod or other MP3 player.
+
+It provides a friendly SwiftUI interface around
+[spotDL](https://github.com/spotDL/spotify-downloader), which finds the audio
+on YouTube Music and uses FFmpeg to convert and tag the files.
+
+## Features
+
+- Spotify playlist and album URL input
+- Clipboard paste button
+- Download-folder picker
+- Optional playlist or album subdirectory
+- Playlist title and album artist used for folder names
+- Per-song table with:
+  - Waiting
+  - Downloading
+  - Succeeded
+  - Not found
+  - Download failed
+  - Conversion failed
+- Automatic retry up to three total attempts
+- Manual retry for failed songs
+- Existing files are skipped safely during retries
+- Universal macOS binary for Apple Silicon and Intel Macs
+- Native app icon and About panel
+
+## How it works
+
+1. TrackHarbor validates the Spotify URL.
+2. It extracts the playlist or album track metadata with spotDL.
+3. It displays the complete track list before downloading.
+4. It runs spotDL with the managed FFmpeg binary and streams progress into the
+   song table.
+5. Failed jobs are retried automatically. Existing successful files are not
+   downloaded again.
+
+The app stores its managed runtime outside the app bundle:
+
+```text
+~/Library/Application Support/TrackHarbor/runtime/
+  python/       Portable Python runtime
+  venv/         spotDL virtual environment
+  .spotdl/      FFmpeg, Deno, and spotDL data
+```
+
+No system Python, FFmpeg, Deno, or spotDL installation is required. The first
+launch needs an internet connection to download the portable runtime and
+dependencies.
+
+## Installation
+
+Download or build `TrackHarbor.app`, then drag it to the Applications folder.
+For a locally built app:
+
+```sh
+open TrackHarbor.app
+```
+
+This repository currently produces an ad-hoc signed app. macOS may show a
+Gatekeeper warning the first time. Open the app from Finder using
+**Control-click → Open**.
+
+The app needs internet access on first launch and whenever spotDL or its
+managed dependencies are installed or updated.
+
+## Building from source
+
+Requirements:
+
+- macOS 13 or later
+- Swift 5.9 or later
+- Xcode or Apple Command Line Tools
+
+Build the universal app:
+
+```sh
+./build-app.sh
+```
+
+The script builds both `arm64` and `x86_64` slices, combines them with `lipo`,
+creates the `.icns` app icon, signs the app ad hoc, and outputs:
+
+```text
+TrackHarbor.app
+```
+
+The build currently emits linker warnings on some Command Line Tools
+installations because Apple does not ship every Intel Swift compatibility
+library there. The Intel slice is still produced and verified.
+
+## Credits and licensing
+
+TrackHarbor is an independent wrapper and is not affiliated with Spotify,
+YouTube, spotDL, or FFmpeg. It uses those projects as external components.
+See [LICENSE](LICENSE) for the TrackHarbor license.
+
+Use the app only for content you are authorized to download, and follow the
+terms of the services and content providers involved.
