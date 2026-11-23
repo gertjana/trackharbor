@@ -7,26 +7,6 @@ It provides a friendly SwiftUI interface around
 [spotDL](https://github.com/spotDL/spotify-downloader), which finds the audio
 on YouTube Music and uses FFmpeg to convert and tag the files.
 
-## Features
-
-- Spotify playlist and album URL input
-- Clipboard paste button
-- Download-folder picker
-- Optional playlist or album subdirectory
-- Playlist title and album artist used for folder names
-- Per-song table with:
-  - Waiting
-  - Downloading
-  - Succeeded
-  - Not found
-  - Download failed
-  - Conversion failed
-- Automatic retry up to three total attempts
-- Manual retry for failed songs
-- Existing files are skipped safely during retries
-- Universal macOS binary for Apple Silicon and Intel Macs
-- Native app icon and About panel
-
 ## How it works
 
 1. TrackHarbor validates the Spotify URL.
