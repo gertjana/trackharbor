@@ -43,7 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ))
         var options: [NSApplication.AboutPanelOptionKey: Any] = [
             .applicationName: "TrackHarbor",
-            .applicationVersion: "1.0",
+            .applicationVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.1",
             .credits: credits
         ]
         if let icon = NSApp.applicationIconImage {

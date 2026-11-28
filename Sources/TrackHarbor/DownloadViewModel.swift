@@ -38,6 +38,34 @@ struct TrackProgress: Identifiable {
     var detail = ""
 }
 
+struct ExtractedTracks {
+    let tracks: [TrackProgress]
+    let albumArtist: String?
+    let albumTitle: String?
+
+    init?(data: Data) {
+        guard let records = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            return nil
+        }
+        tracks = records.compactMap { record in
+            let name = (record["name"] as? String) ?? (record["title"] as? String)
+            guard let name, !name.isEmpty else { return nil }
+            let artist = (record["artist"] as? String)
+                ?? (record["artists"] as? [String])?.joined(separator: ", ")
+                ?? ""
+            return TrackProgress(title: artist.isEmpty ? name : "\(artist) - \(name)")
+        }
+        let album = records.first { record in
+            guard let artist = record["album_artist"] as? String,
+                  let title = record["album_name"] as? String else { return false }
+            return !artist.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        albumArtist = album?["album_artist"] as? String
+        albumTitle = album?["album_name"] as? String
+    }
+}
+
 @MainActor
 final class DownloadViewModel: ObservableObject {
     @Published var spotifyURL = ""
@@ -139,12 +167,13 @@ final class DownloadViewModel: ObservableObject {
             update(title: "Setting up TrackHarbor", icon: "gearshape", message: "Preparing the managed downloader environment…", progress: 0)
             let tools = try await RuntimeManager.ensure()
             update(title: "Reading playlist", icon: "music.note.list", message: "Extracting songs from Spotify…", progress: 0)
-            tracks = try await extractTracks(executable: tools.spotdl, environment: tools.environment, url: url)
+            let extracted = try await extractTracks(executable: tools.spotdl, environment: tools.environment, url: url)
+            tracks = extracted.tracks
             expectedTrackCount = tracks.count
             guard !tracks.isEmpty else {
                 throw DownloadError.processFailed("No songs were found in this playlist.")
             }
-            let destination = try await destinationDirectory(baseDirectory: directory, url: url)
+            let destination = try await destinationDirectory(baseDirectory: directory, url: url, extracted: extracted)
             try FileManager.default.createDirectory(atPath: destination, withIntermediateDirectories: true)
 
             for attempt in 1...3 {
@@ -220,7 +249,7 @@ final class DownloadViewModel: ObservableObject {
         return output
     }
 
-    private func extractTracks(executable: String, environment: [String: String], url: String) async throws -> [TrackProgress] {
+    private func extractTracks(executable: String, environment: [String: String], url: String) async throws -> ExtractedTracks {
         let metadataURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("spotdl-\(UUID().uuidString).spotdl")
         defer { try? FileManager.default.removeItem(at: metadataURL) }
@@ -230,22 +259,18 @@ final class DownloadViewModel: ObservableObject {
             environment: environment
         )
         guard let data = try? Data(contentsOf: metadataURL),
-              let records = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+              let extracted = ExtractedTracks(data: data) else {
             throw DownloadError.processFailed(output.isEmpty ? "spotdl did not return playlist metadata." : output)
         }
-        return records.compactMap { record in
-            let name = (record["name"] as? String) ?? (record["title"] as? String)
-            guard let name, !name.isEmpty else { return nil }
-            let artist = (record["artist"] as? String)
-                ?? (record["artists"] as? [String])?.joined(separator: ", ")
-                ?? ""
-            return TrackProgress(title: artist.isEmpty ? name : "\(artist) - \(name)")
-        }
+        return extracted
     }
 
-    private func destinationDirectory(baseDirectory: String, url: String) async throws -> String {
+    private func destinationDirectory(baseDirectory: String, url: String, extracted: ExtractedTracks) async throws -> String {
         guard usePlaylistSubdirectory else { return baseDirectory }
         update(title: "Preparing destination", icon: "folder", message: "Reading the playlist or album title…", progress: 0)
+        if URL(string: url)?.path.hasPrefix("/album/") == true {
+            return try albumDirectory(baseDirectory: baseDirectory, artist: extracted.albumArtist, title: extracted.albumTitle)
+        }
         guard let title = try await spotifyFolderTitle(for: url) else {
             throw DownloadError.processFailed("Spotify did not provide a playlist or album title.")
         }
@@ -254,6 +279,19 @@ final class DownloadViewModel: ObservableObject {
             throw DownloadError.processFailed("The Spotify title cannot be used as a folder name.")
         }
         return (baseDirectory as NSString).appendingPathComponent(safeTitle)
+    }
+
+    func albumDirectory(baseDirectory: String, artist: String?, title: String?) throws -> String {
+        guard let artist, let title else {
+            throw DownloadError.processFailed("spotdl did not provide the album artist and title.")
+        }
+        let safeArtist = sanitizeDirectoryName(artist)
+        let safeTitle = sanitizeDirectoryName(title)
+        guard !safeArtist.isEmpty, !safeTitle.isEmpty else {
+            throw DownloadError.processFailed("The album artist or title cannot be used as a folder name.")
+        }
+        let artistDirectory = (baseDirectory as NSString).appendingPathComponent(safeArtist)
+        return (artistDirectory as NSString).appendingPathComponent(safeTitle)
     }
 
     private func spotifyFolderTitle(for url: String) async throws -> String? {
@@ -268,10 +306,6 @@ final class DownloadViewModel: ObservableObject {
         }
         let metadata = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         guard let title = metadata?["title"] as? String else { return nil }
-        let isAlbum = URL(string: url)?.path.contains("/album/") == true
-        if isAlbum, let artist = metadata?["author_name"] as? String, !artist.isEmpty {
-            return "\(artist) - \(title)"
-        }
         return title
     }
 

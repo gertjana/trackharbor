@@ -17,6 +17,10 @@ on YouTube Music and uses FFmpeg to convert and tag the files.
 5. Failed jobs are retried automatically. Existing successful files are not
    downloaded again.
 
+Enable the folder organization option to save playlists in a folder named after
+the playlist and albums under `Artist/Album/`. With the option off, songs are
+saved directly in the chosen download folder.
+
 The app stores its managed runtime outside the app bundle:
 
 ```text

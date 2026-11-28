@@ -212,6 +212,41 @@ struct DownloadViewModelTests {
         #expect(value.count == 80)
     }
 
+    @Test func albumMetadataUsesAlbumArtistInsteadOfTrackArtist() throws {
+        let data = Data(#"[{"name":"Song","artist":"Guest Singer","album_artist":"Album Artist","album_name":"Album Title"}]"#.utf8)
+        let extracted = try #require(ExtractedTracks(data: data))
+        let directory = try DownloadViewModel().albumDirectory(
+            baseDirectory: "/Music", artist: extracted.albumArtist, title: extracted.albumTitle
+        )
+        #expect(extracted.tracks.map(\.title) == ["Guest Singer - Song"])
+        #expect(directory == "/Music/Album Artist/Album Title")
+    }
+
+    @Test func albumFolderComponentsAreSanitizedSeparately() throws {
+        let directory = try DownloadViewModel().albumDirectory(
+            baseDirectory: "/Music", artist: " ../AC/DC ", title: " .Best: Hits? "
+        )
+        #expect(directory == "/Music/-AC-DC/Best- Hits-")
+    }
+
+    @Test func albumFolderRequiresUsableArtistAndTitle() {
+        let model = DownloadViewModel()
+        #expect(throws: (any Error).self) {
+            try model.albumDirectory(baseDirectory: "/Music", artist: nil, title: "Album")
+        }
+        #expect(throws: (any Error).self) {
+            try model.albumDirectory(baseDirectory: "/Music", artist: "Artist", title: " ... ")
+        }
+    }
+
+    @Test func albumMetadataSkipsIncompleteRecords() throws {
+        let data = Data(#"[{"name":"First","album_artist":"","album_name":"Album"},{"name":"Second","album_artist":"Artist","album_name":"Album"}]"#.utf8)
+        let extracted = try #require(ExtractedTracks(data: data))
+        #expect(extracted.tracks.count == 2)
+        #expect(extracted.albumArtist == "Artist")
+        #expect(extracted.albumTitle == "Album")
+    }
+
     @Test func lineTrackTitlePrefersQuotedValue() {
         let model = DownloadViewModel()
 

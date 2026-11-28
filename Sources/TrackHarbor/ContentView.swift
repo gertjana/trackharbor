@@ -68,7 +68,7 @@ struct ContentView: View {
                 }
             }
 
-            Toggle("Create a subfolder using the playlist or album title", isOn: $model.usePlaylistSubdirectory)
+            Toggle("Organize into playlist or artist/album folders", isOn: $model.usePlaylistSubdirectory)
                 .disabled(model.isRunning)
 
             HStack {
