@@ -27,7 +27,8 @@ jobs:
 
       - name: Verify app bundle
         run: |
-          lipo -verify_arch arm64 x86_64 TrackHarbor.app/Contents/MacOS/TrackHarbor
+          lipo TrackHarbor.app/Contents/MacOS/TrackHarbor -verify_arch arm64
+          lipo TrackHarbor.app/Contents/MacOS/TrackHarbor -verify_arch x86_64
           codesign --verify --deep --strict --verbose=2 TrackHarbor.app
 
       - name: Archive app bundle
