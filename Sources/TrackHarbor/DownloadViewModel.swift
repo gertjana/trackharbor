@@ -316,8 +316,8 @@ final class DownloadViewModel: ObservableObject {
         outputLines.append(text)
         let pattern = #"\[?(\d+)\s*/\s*(\d+)\]?"#
         if let match = text.range(of: pattern, options: .regularExpression) {
-            let values = text[match].dropFirst().dropLast().split(separator: "/").compactMap {
-                Double($0.trimmingCharacters(in: .whitespaces))
+            let values = text[match].split(separator: "/").compactMap {
+                Double($0.trimmingCharacters(in: .whitespaces.union(.init(charactersIn: "[]"))))
             }
             if values.count == 2, values[1] > 0 {
                 let index = max(0, Int(values[0]) - 1)
@@ -359,7 +359,8 @@ final class DownloadViewModel: ObservableObject {
         let index: Int
         if let parsedTitle,
            let matchingIndex = tracks.firstIndex(where: {
-                      let existing = $0.title.lowercased()
+                       guard !$0.title.hasPrefix("Track ") else { return false }
+                       let existing = $0.title.lowercased()
                       let parsed = parsedTitle.lowercased()
                       return existing.contains(parsed) || parsed.contains(existing)
                   }) {
@@ -385,7 +386,7 @@ final class DownloadViewModel: ObservableObject {
             if !quoted.isEmpty { return quoted }
         }
 
-        guard let separator = text.firstIndex(of: ":") else { return nil }
+        guard !text.contains("://"), let separator = text.firstIndex(of: ":") else { return nil }
         let candidate = String(text[..<separator])
             .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
         guard !candidate.isEmpty, !candidate.contains("://") else { return nil }
@@ -419,7 +420,6 @@ final class DownloadViewModel: ObservableObject {
         guard let keyword = keywords.first(where: { lowercased.contains($0) }),
               let range = lowercased.range(of: keyword) else { return nil }
         var title = String(text[range.upperBound...])
-            .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
         if let bracket = title.range(of: #"\s*\[\d+\s*/\s*\d+\]"#, options: .regularExpression) {
             title.removeSubrange(bracket)
         }
@@ -450,8 +450,37 @@ final class DownloadViewModel: ObservableObject {
     }
 
     private var expandedDirectory: String {
-        (outputDirectory as NSString).expandingTildeInPath
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        (outputDirectory.trimmingCharacters(in: .whitespacesAndNewlines) as NSString).expandingTildeInPath
+    }
+}
+
+extension DownloadViewModel {
+    var testIsValidURL: Bool { isValidURL }
+    var testExpandedDirectory: String { expandedDirectory }
+    var testTrackSummary: String { trackSummary }
+
+    func testConsume(line: String) async {
+        await consume(line: line)
+    }
+
+    func testSanitizeDirectoryName(_ value: String) -> String {
+        sanitizeDirectoryName(value)
+    }
+
+    func testResetUnfinishedTracks() {
+        resetUnfinishedTracks()
+    }
+
+    func testFinalizeUnfinishedTracks() {
+        finalizeUnfinishedTracks()
+    }
+
+    func testLineTrackTitle(_ text: String) -> String? {
+        lineTrackTitle(text)
+    }
+
+    func testTitleFrom(_ text: String) -> String? {
+        titleFrom(text)
     }
 }
 
@@ -465,4 +494,3 @@ private enum DownloadError: LocalizedError {
         }
     }
 }
-

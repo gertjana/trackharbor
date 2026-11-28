@@ -71,6 +71,21 @@ The build currently emits linker warnings on some Command Line Tools
 installations because Apple does not ship every Intel Swift compatibility
 library there. The Intel slice is still produced and verified.
 
+## Testing
+
+The tests use Swift Testing and require a Swift 6 toolchain. Run them with:
+
+```sh
+swift test --disable-xctest
+```
+
+If the Command Line Tools fail to find `TestingMacros`, explicitly load the
+installed plugin:
+
+```sh
+swift test --disable-xctest -Xswiftc -load-plugin-library -Xswiftc "$(xcode-select -p)/usr/lib/swift/host/plugins/testing/libTestingMacros.dylib"
+```
+
 ## Credits and licensing
 
 TrackHarbor is an independent wrapper and is not affiliated with Spotify,

@@ -11,6 +11,10 @@ let package = Package(
         .executableTarget(
             name: "TrackHarbor",
             path: "Sources/TrackHarbor"
+        ),
+        .testTarget(
+            name: "TrackHarborTests",
+            dependencies: ["TrackHarbor"]
         )
     ]
 )

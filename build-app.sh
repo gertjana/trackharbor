@@ -2,14 +2,14 @@
 set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-ARM_BUILD_DIR="$ROOT/.build-arm64/out/Products/Release"
-INTEL_BUILD_DIR="$ROOT/.build-x86_64/out/Products/Release"
 APP_DIR="$ROOT/TrackHarbor.app"
 ICON_SOURCE="$ROOT/Assets/AppIcon.png"
 ICONSET_DIR="$ROOT/.build/AppIcon.iconset"
 
 swift build -c release --triple arm64-apple-macosx13.0 --scratch-path "$ROOT/.build-arm64"
 swift build -c release --triple x86_64-apple-macosx13.0 --scratch-path "$ROOT/.build-x86_64"
+ARM_BUILD_DIR="$(swift build -c release --triple arm64-apple-macosx13.0 --scratch-path "$ROOT/.build-arm64" --show-bin-path)"
+INTEL_BUILD_DIR="$(swift build -c release --triple x86_64-apple-macosx13.0 --scratch-path "$ROOT/.build-x86_64" --show-bin-path)"
 rm -rf "$APP_DIR"
 mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
 lipo -create "$ARM_BUILD_DIR/TrackHarbor" "$INTEL_BUILD_DIR/TrackHarbor" -output "$APP_DIR/Contents/MacOS/TrackHarbor"
