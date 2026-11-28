@@ -19,6 +19,17 @@ jobs:
       - name: Show Swift version
         run: swift --version
 
+      - name: Check release tag matches app version
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Info.plist)
+          if [[ "$RELEASE_TAG" != "v$version" ]]; then
+            printf 'Tag %s does not match app version %s\n' "$RELEASE_TAG" "$version" >&2
+            exit 1
+          fi
+
       - name: Run Swift tests
         run: swift test --disable-xctest
 
@@ -40,3 +51,24 @@ jobs:
           name: TrackHarbor-macOS
           path: TrackHarbor.zip
           if-no-files-found: error
+
+  release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download app artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: TrackHarbor-macOS
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$RELEASE_TAG" TrackHarbor.zip \
+            --verify-tag --title "TrackHarbor ${RELEASE_TAG#v}" --generate-notes

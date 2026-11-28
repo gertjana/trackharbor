@@ -90,6 +90,21 @@ installed plugin:
 swift test --disable-xctest -Xswiftc -load-plugin-library -Xswiftc "$(xcode-select -p)/usr/lib/swift/host/plugins/testing/libTestingMacros.dylib"
 ```
 
+## Publishing a release
+
+Update `CFBundleShortVersionString` and `CFBundleVersion` in `Info.plist`, commit
+and push the change, then push a matching version tag. For example:
+
+```sh
+git tag v1.1
+git push origin v1.1
+```
+
+GitHub Actions runs the tests, builds the universal app, and publishes a GitHub
+Release with `TrackHarbor.zip`. The tag must match the app's version. Regular
+branch and pull-request builds upload an Actions artifact without publishing a
+release.
+
 ## Credits and licensing
 
 TrackHarbor is an independent wrapper and is not affiliated with Spotify,
